@@ -2085,6 +2085,42 @@ main footer {
   );
 }
 
+.form-row:nth-child(4) {
+  border-color: rgba(91, 155, 213, 0.3);
+  background: linear-gradient(
+    120deg,
+    rgba(91, 155, 213, 0.04) 0%,
+    #ffffff 100%
+  );
+}
+
+.form-row:nth-child(5) {
+  border-color: rgba(197, 90, 138, 0.3);
+  background: linear-gradient(
+    120deg,
+    rgba(197, 90, 138, 0.04) 0%,
+    #ffffff 100%
+  );
+}
+
+.form-row:nth-child(6) {
+  border-color: rgba(156, 39, 176, 0.3);
+  background: linear-gradient(
+    120deg,
+    rgba(156, 39, 176, 0.04) 0%,
+    #ffffff 100%
+  );
+}
+
+.form-row:nth-child(7) {
+  border-color: rgba(74, 124, 124, 0.3);
+  background: linear-gradient(
+    120deg,
+    rgba(74, 124, 124, 0.04) 0%,
+    #ffffff 100%
+  );
+}
+
 .form-row:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
@@ -2125,6 +2161,26 @@ main footer {
 .form-row:nth-child(3) .form-question-icon {
   color: #ffc000;
   background: rgba(255, 192, 0, 0.15);
+}
+
+.form-row:nth-child(4) .form-question-icon {
+  color: #5b9bd5;
+  background: rgba(91, 155, 213, 0.15);
+}
+
+.form-row:nth-child(5) .form-question-icon {
+  color: #c55a8a;
+  background: rgba(197, 90, 138, 0.15);
+}
+
+.form-row:nth-child(6) .form-question-icon {
+  color: #9c27b0;
+  background: rgba(156, 39, 176, 0.15);
+}
+
+.form-row:nth-child(7) .form-question-icon {
+  color: #4a7c7c;
+  background: rgba(74, 124, 124, 0.15);
 }
 
 .quick-select-grid {
@@ -2226,6 +2282,46 @@ main footer {
   font-weight: 600;
   color: #2d3748;
   line-height: 1.5;
+}
+
+.blooms-taxonomy-grid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.blooms-taxonomy-btn {
+  flex: 0 0 auto;
+  min-width: 120px;
+}
+
+.blooms-arrow {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4a7c7c;
+  margin: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .blooms-taxonomy-grid {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .blooms-arrow {
+    transform: rotate(90deg);
+    margin: 4px 0;
+  }
+  
+  .blooms-taxonomy-btn {
+    width: 100%;
+  }
 }
 
 .create-btn-container {

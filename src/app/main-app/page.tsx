@@ -379,6 +379,10 @@ const MainAppPage: React.FC = () => {
   const [grade, setGrade] = useState<string | null>(null);
   const [duration, setDuration] = useState<string | null>(null);
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
+  const [teachingMethods, setTeachingMethods] = useState<string[]>([]);
+  const [learningMethods, setLearningMethods] = useState<string[]>([]);
+  const [teachingPhilosophy, setTeachingPhilosophy] = useState<string | null>(null);
+  const [bloomsTaxonomy, setBloomsTaxonomy] = useState<string[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Generating...");
@@ -690,6 +694,10 @@ const MainAppPage: React.FC = () => {
     setGrade(null);
     setDuration(null);
     setQuestionTypes([]);
+    setTeachingMethods([]);
+    setLearningMethods([]);
+    setTeachingPhilosophy(null);
+    setBloomsTaxonomy([]);
     setFlashcardIndex(0);
     setFlashcardFlipped(false);
     setSlideIndex(0);
@@ -758,6 +766,34 @@ const MainAppPage: React.FC = () => {
 
   const toggleQuestionType = (value: string) => {
     setQuestionTypes((prev) =>
+      prev.includes(value)
+        ? prev.filter((v) => v !== value)
+        : [...prev, value],
+    );
+  };
+
+  const toggleTeachingMethod = (value: string) => {
+    setTeachingMethods((prev) =>
+      prev.includes(value)
+        ? prev.filter((v) => v !== value)
+        : [...prev, value],
+    );
+  };
+
+  const toggleLearningMethod = (value: string) => {
+    setLearningMethods((prev) =>
+      prev.includes(value)
+        ? prev.filter((v) => v !== value)
+        : [...prev, value],
+    );
+  };
+
+  const handleTeachingPhilosophyClick = (value: string) => {
+    setTeachingPhilosophy((prev) => (prev === value ? null : value));
+  };
+
+  const toggleBloomsTaxonomy = (value: string) => {
+    setBloomsTaxonomy((prev) =>
       prev.includes(value)
         ? prev.filter((v) => v !== value)
         : [...prev, value],
@@ -1568,6 +1604,183 @@ const MainAppPage: React.FC = () => {
                         </button>
                       ),
                     )}
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-question">
+                    <svg
+                      className="form-question-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                      <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+                    </svg>
+                    Teaching Methods
+                  </div>
+                  <div className="question-type-grid">
+                    {[
+                      "Induction",
+                      "Deduction",
+                      "Lecture",
+                      "NLP",
+                      "Inquiry-Based",
+                      "Project-Based",
+                      "Flipped Class",
+                      "Blended Learning",
+                      "Demonstration",
+                      "Socratic Method",
+                      "Experiential",
+                      "Problem-Based",
+                      "Differentiated",
+                      "Collaborative Learning",
+                    ].map((label) => {
+                      const selected = teachingMethods.includes(label);
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          className={`question-type-card ${
+                            selected ? "selected" : ""
+                          }`}
+                          onClick={() => toggleTeachingMethod(label)}
+                        >
+                          <div className="question-type-name">
+                            {label}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-question">
+                    <svg
+                      className="form-question-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    Learning Methods
+                  </div>
+                  <div className="question-type-grid">
+                    {[
+                      "Gamification",
+                      "Hands-on",
+                      "Group Work",
+                      "Peer Teaching",
+                      "Simulations",
+                      "Reflective Practice",
+                      "Activity-Based Learning",
+                    ].map((label) => {
+                      const selected = learningMethods.includes(label);
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          className={`question-type-card ${
+                            selected ? "selected" : ""
+                          }`}
+                          onClick={() => toggleLearningMethod(label)}
+                        >
+                          <div className="question-type-name">
+                            {label}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-question">
+                    <svg
+                      className="form-question-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                      <line x1="12" y1="22.08" x2="12" y2="12" />
+                    </svg>
+                    Teaching Philosophy
+                  </div>
+                  <div className="quick-select-grid">
+                    {[
+                      "Active & Inclusive Learning",
+                      "Student-Centered Approach",
+                      "Growth Mindset",
+                      "Creativity & Critical Thinking",
+                      "Collaborative Learning Belief",
+                    ].map((label) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className={`quick-select-btn ${
+                          teachingPhilosophy === label ? "selected" : ""
+                        }`}
+                        onClick={() => handleTeachingPhilosophyClick(label)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-question">
+                    <svg
+                      className="form-question-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <polyline points="9 11 12 14 22 4" />
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
+                    Learning Flow – Bloom's Taxonomy
+                  </div>
+                  <div className="question-type-grid blooms-taxonomy-grid">
+                    {[
+                      "Remember",
+                      "Understand",
+                      "Apply",
+                      "Analyze",
+                      "Evaluate",
+                      "Create",
+                    ].map((label, index) => {
+                      const selected = bloomsTaxonomy.includes(label);
+                      return (
+                        <React.Fragment key={label}>
+                          <button
+                            type="button"
+                            className={`question-type-card blooms-taxonomy-btn ${
+                              selected ? "selected" : ""
+                            }`}
+                            onClick={() => toggleBloomsTaxonomy(label)}
+                          >
+                            <div className="question-type-name">
+                              {label}
+                            </div>
+                          </button>
+                          {index < 5 && (
+                            <span className="blooms-arrow">→</span>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
                 </div>
 
