@@ -137,7 +137,7 @@ export default function HeroSection() {
             </div>
             {/* Second line - CHALK AI */}
             <div className="hero-title-line-2 font-black leading-none">
-              CHALK AI
+              <span className="typewriter-text">CHALK AI</span>
             </div>
           </h1>
 

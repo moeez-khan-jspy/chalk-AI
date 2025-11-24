@@ -386,6 +386,7 @@ const MainAppPage: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Generating...");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -750,9 +751,9 @@ const MainAppPage: React.FC = () => {
 
   const proceedFromStep3 = () => {
     if (uploadMode === "upload" && uploadedFileName) {
-      setHomeStep(4);
+      handleFinalCreation();
     } else if (uploadMode === "knowledge" && kbSelectedFiles.length) {
-      setHomeStep(4);
+      handleFinalCreation();
     }
   };
 
@@ -800,8 +801,7 @@ const MainAppPage: React.FC = () => {
     );
   };
 
-  const handleDetailsSubmit = (e: FormEvent) => {
-    e.preventDefault();
+  const handleFinalCreation = () => {
     if (!selectedContentType) return;
 
     let targetView: HomeView | null = null;
@@ -849,6 +849,11 @@ const MainAppPage: React.FC = () => {
         videoRef.current.currentTime = 0;
       }
     }, 3000);
+  };
+
+  const handleDetailsSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    setHomeStep(4);
   };
 
   const handleGoBackToHomeView = () => {
@@ -984,6 +989,7 @@ const MainAppPage: React.FC = () => {
       }`}
       onClick={() => {
         setActiveSection(id);
+        setMobileMenuOpen(false); // Close mobile menu on navigation
         if (id === "home") {
           resetHomeFlow();
         }
@@ -1304,16 +1310,16 @@ const MainAppPage: React.FC = () => {
           </div>
         )}
 
-        {/* Step 3 */}
-        {homeStep === 3 && (
-          <div id="step3Container" className="step-container active">
+        {/* Step 4 */}
+        {homeStep === 4 && (
+          <div id="step4Container" className="step-container active">
             <div className="step-header">
               <button
                 type="button"
                 className="step-back-btn"
-                onClick={() => setHomeStep(2)}
+                onClick={() => setHomeStep(3)}
               >
-                ← Back to Content Types
+                ← Back to Details
               </button>
               <div className="step-title">Add Content</div>
               <div className="step-subtitle">
@@ -1389,9 +1395,9 @@ const MainAppPage: React.FC = () => {
                     <button
                       type="button"
                       className="btn-proceed"
-                      onClick={() => setHomeStep(4)}
+                      onClick={handleFinalCreation}
                     >
-                      Continue →
+                      Create Content →
                     </button>
                   </div>
                 </div>
@@ -1474,14 +1480,14 @@ const MainAppPage: React.FC = () => {
           </div>
         )}
 
-        {/* Step 4 */}
-        {homeStep === 4 && (
-          <div id="step4Container" className="step-container active">
+        {/* Step 3 */}
+        {homeStep === 3 && (
+          <div id="step3Container" className="step-container active">
             <div className="step-header">
               <button
                 type="button"
                 className="step-back-btn"
-                onClick={() => setHomeStep(3)}
+                onClick={() => setHomeStep(2)}
               >
                 ← Back
               </button>
@@ -1786,7 +1792,7 @@ const MainAppPage: React.FC = () => {
 
                 <div className="create-btn-container">
                   <button type="submit" className="btn-create-final">
-                    Create Content
+                    Next →
                   </button>
                 </div>
               </div>
@@ -2898,8 +2904,49 @@ const MainAppPage: React.FC = () => {
 
   return (
     <div className="dashboard-container">
+      {/* Mobile Menu Toggle Button */}
+      <button
+        type="button"
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        aria-label="Toggle menu"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          width="24"
+          height="24"
+        >
+          {mobileMenuOpen ? (
+            <>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </>
+          ) : (
+            <>
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </>
+          )}
+        </svg>
+      </button>
+
+      {/* Mobile Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="mobile-overlay"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}>
         <div
           className="sidebar-header"
           onClick={() => {

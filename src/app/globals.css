@@ -99,7 +99,7 @@ main footer {
   width: 450px;
   height: 450px;
   border: 2px solid rgba(236, 72, 153, 0.25);
-  animation: pulseCircle 8s ease-in-out infinite;
+  animation: floatAndPulse 8s ease-in-out infinite;
 }
 
 .hero-circle-2 {
@@ -108,8 +108,8 @@ main footer {
   width: 400px;
   height: 400px;
   border: 2px solid rgba(236, 72, 153, 0.22);
-  animation: pulseCircle 10s ease-in-out infinite;
-  animation-delay: -2s;
+  animation: floatAndPulse 10s ease-in-out infinite;
+  animation-delay: -1s;
 }
 
 .hero-circle-3 {
@@ -118,8 +118,8 @@ main footer {
   width: 350px;
   height: 350px;
   border: 2px solid rgba(236, 72, 153, 0.24);
-  animation: pulseCircle 9s ease-in-out infinite;
-  animation-delay: -1s;
+  animation: floatAndPulse 9s ease-in-out infinite;
+  animation-delay: -0.5s;
 }
 
 .hero-circle-4 {
@@ -128,8 +128,8 @@ main footer {
   width: 420px;
   height: 420px;
   border: 2px solid rgba(236, 72, 153, 0.26);
-  animation: pulseCircle 11s ease-in-out infinite;
-  animation-delay: -3s;
+  animation: floatAndPulse 11s ease-in-out infinite;
+  animation-delay: -1.5s;
 }
 
 .hero-circle-5 {
@@ -138,8 +138,8 @@ main footer {
   width: 360px;
   height: 360px;
   border: 2px solid rgba(236, 72, 153, 0.22);
-  animation: pulseCircle 9.5s ease-in-out infinite;
-  animation-delay: -1.5s;
+  animation: floatAndPulse 8.5s ease-in-out infinite;
+  animation-delay: -0.8s;
 }
 
 .hero-circle-6 {
@@ -148,8 +148,8 @@ main footer {
   width: 550px;
   height: 550px;
   border: 2px solid rgba(236, 72, 153, 0.28);
-  animation: pulseCircle 12s ease-in-out infinite;
-  animation-delay: -4s;
+  animation: floatAndPulse 12s ease-in-out infinite;
+  animation-delay: -2s;
 }
 
 .hero-circle-7 {
@@ -158,8 +158,8 @@ main footer {
   width: 490px;
   height: 490px;
   border: 2px solid rgba(236, 72, 153, 0.23);
-  animation: pulseCircle 10.5s ease-in-out infinite;
-  animation-delay: -2.5s;
+  animation: floatAndPulse 10.5s ease-in-out infinite;
+  animation-delay: -1.2s;
 }
 
 .hero-grid-line {
@@ -167,16 +167,77 @@ main footer {
   box-shadow: 0 0 10px rgba(236, 72, 153, 0.1);
 }
 
-/* Pulsing animation for circles */
-@keyframes pulseCircle {
-  0%, 100% {
+/* Floating and Pulsing animation for circles */
+@keyframes floatAndPulse {
+  0% {
     opacity: 0.8;
-    transform: scale(1);
+    transform: scale(1) translate(0, 0);
+  }
+  25% {
+    opacity: 0.9;
+    transform: scale(1.05) translate(80px, -60px);
   }
   50% {
     opacity: 1;
-    transform: scale(1.02);
+    transform: scale(1.02) translate(-60px, 80px);
   }
+  75% {
+    opacity: 0.9;
+    transform: scale(0.98) translate(-80px, -40px);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scale(1) translate(0, 0);
+  }
+}
+
+/* Typewriter Effect */
+@keyframes typewriter {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blinkCursor {
+  from, to {
+    border-right-color: rgba(232, 213, 186, 0.75);
+  }
+  50% {
+    border-right-color: transparent;
+  }
+}
+
+.typewriter-text {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  margin: 0 auto;
+  border-right: 4px solid transparent; /* Start transparent, animation provides color */
+  width: 0;
+  animation: 
+    typewriter 2.5s steps(20, end) forwards,
+    blinkCursor 0.75s step-end 5; /* Runs for ~3.75s total, then cursor disappears */
+  max-width: fit-content;
+}
+
+/* Fade in up animation for text */
+@keyframes fadeInUpText {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-text {
+  animation: fadeInUpText 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0; /* Start invisible */
 }
 
 .hero-title-line-1 {
@@ -636,7 +697,7 @@ main footer {
   height: 450px;
   border: 2px solid rgba(139, 115, 85, 0.25);
   border-radius: 50%;
-  animation: pulseCircle 8s ease-in-out infinite;
+  animation: floatAndPulse 8s ease-in-out infinite;
 }
 
 .main-app-circle-2 {
@@ -646,8 +707,8 @@ main footer {
   height: 400px;
   border: 2px solid rgba(139, 115, 85, 0.22);
   border-radius: 50%;
-  animation: pulseCircle 10s ease-in-out infinite;
-  animation-delay: -2s;
+  animation: floatAndPulse 10s ease-in-out infinite;
+  animation-delay: -1s;
 }
 
 .main-app-circle-3 {
@@ -657,8 +718,8 @@ main footer {
   height: 350px;
   border: 2px solid rgba(139, 115, 85, 0.24);
   border-radius: 50%;
-  animation: pulseCircle 9s ease-in-out infinite;
-  animation-delay: -1s;
+  animation: floatAndPulse 9s ease-in-out infinite;
+  animation-delay: -0.5s;
 }
 
 .main-app-circle-4 {
@@ -668,8 +729,8 @@ main footer {
   height: 420px;
   border: 2px solid rgba(139, 115, 85, 0.26);
   border-radius: 50%;
-  animation: pulseCircle 11s ease-in-out infinite;
-  animation-delay: -3s;
+  animation: floatAndPulse 11s ease-in-out infinite;
+  animation-delay: -1.5s;
 }
 
 .main-app-circle-5 {
@@ -679,8 +740,8 @@ main footer {
   height: 360px;
   border: 2px solid rgba(139, 115, 85, 0.22);
   border-radius: 50%;
-  animation: pulseCircle 9.5s ease-in-out infinite;
-  animation-delay: -1.5s;
+  animation: floatAndPulse 8.5s ease-in-out infinite;
+  animation-delay: -0.8s;
 }
 
 .main-app-circle-6 {
@@ -690,8 +751,8 @@ main footer {
   height: 550px;
   border: 2px solid rgba(139, 115, 85, 0.28);
   border-radius: 50%;
-  animation: pulseCircle 12s ease-in-out infinite;
-  animation-delay: -4s;
+  animation: floatAndPulse 12s ease-in-out infinite;
+  animation-delay: -2s;
 }
 
 .main-app-circle-7 {
@@ -701,8 +762,8 @@ main footer {
   height: 490px;
   border: 2px solid rgba(139, 115, 85, 0.23);
   border-radius: 50%;
-  animation: pulseCircle 10.5s ease-in-out infinite;
-  animation-delay: -2.5s;
+  animation: floatAndPulse 10.5s ease-in-out infinite;
+  animation-delay: -1.2s;
 }
 
 .main-app-grid-line {
@@ -6212,5 +6273,1104 @@ main footer {
 
   .video-section-player {
     border-radius: 18px;
+  }
+}
+
+/* ============================================
+   COMPREHENSIVE RESPONSIVE STYLES FOR MAIN APP
+   ============================================ */
+
+/* Mobile Menu Toggle - Hidden by default */
+.mobile-menu-toggle {
+  display: none;
+}
+
+.mobile-overlay {
+  display: none;
+}
+
+/* Large Tablets and Small Desktops (1024px and below) */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    padding: 20px;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 30px 20px;
+  }
+
+  .home-section-wrapper {
+    padding: 20px 30px;
+  }
+
+  .home-cards-container {
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .task-card-subject {
+    max-width: calc(50% - 10px);
+    min-width: 300px;
+  }
+
+  .content-type-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .question-type-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .unified-form-section {
+    padding: 30px 25px;
+  }
+
+  .form-row {
+    padding: 25px 20px;
+  }
+
+  .step-container {
+    padding: 30px 20px;
+  }
+}
+
+/* Tablets (768px and below) */
+@media (max-width: 768px) {
+  /* Sidebar - Collapse to icon-only */
+  .sidebar {
+    width: 70px;
+    padding: 20px 10px;
+  }
+
+  .sidebar-header {
+    padding: 0 10px 20px;
+    text-align: center;
+  }
+
+  .sidebar-header h1,
+  .sidebar-header p {
+    display: none;
+  }
+
+  .sidebar-menu-link {
+    padding: 18px 10px;
+    justify-content: center;
+  }
+
+  .sidebar-menu-link .icon + span {
+    display: none;
+  }
+
+  .sidebar-menu-link .icon {
+    margin-right: 0;
+  }
+
+  /* Main Content */
+  .main-content {
+    margin-left: 70px;
+    padding: 20px 15px;
+  }
+
+  /* Home Section */
+  .home-section-wrapper {
+    padding: 20px 15px;
+  }
+
+  .home-greeting {
+    font-size: 24px;
+  }
+
+  .home-subtitle {
+    font-size: 15px;
+  }
+
+  .task-section-title {
+    font-size: 16px;
+  }
+
+  /* Home Cards */
+  .home-cards-container {
+    flex-direction: column;
+    margin-top: 40px;
+    gap: 20px;
+  }
+
+  .task-card-subject {
+    max-width: 100%;
+    min-width: 100%;
+  }
+
+  /* Step Container */
+  .step-container {
+    padding: 25px 15px;
+  }
+
+  .step-title {
+    font-size: 24px;
+  }
+
+  .step-subtitle {
+    font-size: 14px;
+  }
+
+  /* Content Type Grid */
+  .content-type-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .content-type-card {
+    padding: 40px 30px;
+  }
+
+  .content-type-icon {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 25px;
+  }
+
+  .content-type-name {
+    font-size: 24px;
+  }
+
+  .content-type-desc {
+    font-size: 16px;
+  }
+
+  /* Upload Options */
+  .upload-options {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .upload-option-card {
+    width: 100%;
+  }
+
+  /* Knowledge Base */
+  .kb-files-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Form Sections */
+  .unified-form-section {
+    padding: 25px 15px;
+    border-radius: 20px;
+  }
+
+  .form-row {
+    padding: 20px 15px;
+    margin-bottom: 25px;
+  }
+
+  .form-question {
+    font-size: 13px;
+    margin-bottom: 15px;
+  }
+
+  .form-question-icon {
+    width: 20px;
+    height: 20px;
+    padding: 5px;
+  }
+
+  /* Quick Select Grid */
+  .quick-select-grid {
+    gap: 10px;
+  }
+
+  .quick-select-btn {
+    min-width: calc(50% - 5px);
+    padding: 12px 15px;
+    font-size: 13px;
+  }
+
+  /* Question Type Grid */
+  .question-type-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .question-type-card {
+    padding: 18px 12px;
+  }
+
+  .question-type-name {
+    font-size: 12px;
+  }
+
+  /* Bloom's Taxonomy */
+  .blooms-taxonomy-grid {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .blooms-arrow {
+    transform: rotate(90deg);
+    margin: 4px 0;
+    text-align: center;
+  }
+
+  .blooms-taxonomy-btn {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  /* Create Button */
+  .create-btn-container {
+    margin-top: 35px;
+  }
+
+  .btn-create-final {
+    padding: 14px 50px;
+    font-size: 15px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Content Headers */
+  .content-header {
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .content-header h2 {
+    font-size: 24px;
+  }
+
+  .content-header p {
+    font-size: 14px;
+  }
+
+  /* Flashcards */
+  .flashcard-container {
+    max-width: 100%;
+    height: 300px;
+  }
+
+  .flashcards-title {
+    font-size: 22px;
+  }
+
+  /* Presentation */
+  .presentation-container {
+    padding: 15px;
+  }
+
+  .slide-display img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Video */
+  .video-container {
+    padding: 10px;
+  }
+
+  .video-container video {
+    width: 100%;
+    height: auto;
+  }
+
+  /* PDF Viewer */
+  .pdf-display-container {
+    height: 500px;
+  }
+
+  /* Profile */
+  .profile-container {
+    padding: 20px;
+  }
+
+  .simple-profile-upload {
+    margin-bottom: 25px;
+  }
+
+  /* Analytics */
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-profile-card {
+    padding: 20px;
+  }
+
+  .chart-container {
+    margin-bottom: 25px;
+  }
+
+  .chart-wrapper {
+    height: 300px;
+  }
+
+  /* Knowledge Base */
+  .upload-section {
+    margin-bottom: 25px;
+  }
+
+  .upload-buttons {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .upload-btn {
+    width: 100%;
+  }
+
+  .files-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile Devices (480px and below) */
+@media (max-width: 480px) {
+  /* Sidebar - Full mobile menu */
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: fixed;
+    top: 0;
+    left: -100%;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+  }
+
+  .sidebar.mobile-open {
+    left: 0;
+  }
+
+  .sidebar-header {
+    padding: 20px;
+    text-align: left;
+  }
+
+  .sidebar-header h1,
+  .sidebar-header p {
+    display: block;
+  }
+
+  .sidebar-menu-link {
+    padding: 15px 20px;
+    justify-content: flex-start;
+  }
+
+  .sidebar-menu-link .icon + span {
+    display: inline;
+    margin-left: 15px;
+  }
+
+  /* Mobile Menu Toggle Button */
+  .mobile-menu-toggle {
+    display: block;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1001;
+    background: #243838;
+    color: #ffffff;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .mobile-menu-toggle:hover {
+    background: #4a7c7c;
+    transform: scale(1.05);
+  }
+
+  .mobile-menu-toggle:active {
+    transform: scale(0.95);
+  }
+
+  /* Mobile Overlay */
+  .mobile-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    backdrop-filter: blur(2px);
+  }
+
+  /* Main Content */
+  .main-content {
+    margin-left: 0;
+    padding: 15px 10px;
+    padding-top: 60px;
+  }
+
+  /* Home Section */
+  .home-section-wrapper {
+    padding: 15px 10px;
+  }
+
+  .home-greeting {
+    font-size: 20px;
+    margin-bottom: 5px;
+  }
+
+  .home-subtitle {
+    font-size: 14px;
+  }
+
+  .task-section-title {
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+
+  /* Home Cards */
+  .home-cards-container {
+    margin-top: 30px;
+    gap: 15px;
+  }
+
+  .task-card-subject {
+    padding: 15px;
+    min-height: auto;
+  }
+
+  .task-card-header {
+    margin-bottom: 12px;
+  }
+
+  .task-title {
+    font-size: 18px;
+  }
+
+  /* Step Container */
+  .step-container {
+    padding: 20px 10px;
+  }
+
+  .step-header {
+    margin-bottom: 20px;
+  }
+
+  .step-back-btn {
+    font-size: 13px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+  }
+
+  .step-title {
+    font-size: 20px;
+    margin-bottom: 5px;
+  }
+
+  .step-subtitle {
+    font-size: 13px;
+  }
+
+  /* Content Type Grid */
+  .content-type-grid {
+    gap: 12px;
+  }
+
+  .content-type-card {
+    padding: 30px 20px;
+  }
+
+  .content-type-icon {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+  }
+
+  .content-type-name {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  .content-type-desc {
+    font-size: 14px;
+  }
+
+  /* Upload Options */
+  .upload-option-card {
+    padding: 25px 20px;
+  }
+
+  .upload-option-title {
+    font-size: 18px;
+  }
+
+  .upload-option-desc {
+    font-size: 13px;
+  }
+
+  /* Form Sections */
+  .unified-form-section {
+    padding: 20px 10px;
+    border-radius: 16px;
+  }
+
+  .form-row {
+    padding: 18px 12px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+  }
+
+  .form-question {
+    font-size: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .form-question-icon {
+    width: 18px;
+    height: 18px;
+    padding: 4px;
+  }
+
+  /* Quick Select Grid */
+  .quick-select-grid {
+    gap: 8px;
+  }
+
+  .quick-select-btn {
+    min-width: calc(50% - 4px);
+    padding: 10px 12px;
+    font-size: 12px;
+    border-radius: 10px;
+  }
+
+  /* Question Type Grid */
+  .question-type-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .question-type-card {
+    padding: 15px 10px;
+    border-radius: 12px;
+  }
+
+  .question-type-name {
+    font-size: 11px;
+  }
+
+  /* Bloom's Taxonomy */
+  .blooms-taxonomy-grid {
+    gap: 6px;
+  }
+
+  .blooms-arrow {
+    font-size: 18px;
+    margin: 2px 0;
+  }
+
+  /* Create Button */
+  .create-btn-container {
+    margin-top: 30px;
+  }
+
+  .btn-create-final {
+    padding: 12px 30px;
+    font-size: 14px;
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  /* Content Headers */
+  .content-header {
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 12px;
+  }
+
+  .content-header h2 {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .content-header p {
+    font-size: 13px;
+  }
+
+  /* Flashcards */
+  .flashcards-wrapper {
+    padding: 10px;
+  }
+
+  .flashcards-title {
+    font-size: 20px;
+  }
+
+  .flashcards-subtitle {
+    font-size: 12px;
+  }
+
+  .flashcard-container {
+    height: 250px;
+    margin-bottom: 12px;
+  }
+
+  .flashcard-navigation {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .nav-btn {
+    width: 100%;
+  }
+
+  /* Presentation */
+  .presentation-viewer-wrapper {
+    padding: 10px;
+  }
+
+  .presentation-viewer-title {
+    font-size: 20px;
+  }
+
+  .presentation-viewer-subtitle {
+    font-size: 12px;
+  }
+
+  .presentation-container {
+    padding: 10px;
+  }
+
+  .presentation-navigation {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .nav-btn-pres {
+    width: 100%;
+  }
+
+  .presentation-viewer-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-presentation-action {
+    width: 100%;
+  }
+
+  /* Video */
+  .video-player-wrapper {
+    padding: 10px;
+  }
+
+  .video-player-title {
+    font-size: 20px;
+  }
+
+  .video-player-subtitle {
+    font-size: 12px;
+  }
+
+  .video-container {
+    padding: 5px;
+  }
+
+  .video-player-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-video-action {
+    width: 100%;
+  }
+
+  /* PDF Viewer */
+  .pdf-viewer-wrapper {
+    padding: 10px;
+  }
+
+  .pdf-viewer-title {
+    font-size: 20px;
+  }
+
+  .pdf-viewer-subtitle {
+    font-size: 12px;
+  }
+
+  .pdf-display-container {
+    height: 400px;
+    margin-bottom: 15px;
+  }
+
+  .pdf-viewer-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-pdf-action {
+    width: 100%;
+  }
+
+  /* Mind Map */
+  .mindmap-viewer-wrapper {
+    padding: 10px;
+  }
+
+  .mindmap-viewer-title {
+    font-size: 20px;
+  }
+
+  .mindmap-viewer-subtitle {
+    font-size: 12px;
+  }
+
+  .mindmap-container {
+    padding: 10px;
+    overflow-x: auto;
+  }
+
+  .mindmap-display {
+    min-width: 800px;
+  }
+
+  .mindmap-viewer-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-mindmap-action {
+    width: 100%;
+  }
+
+  /* Profile */
+  .profile-container {
+    padding: 15px;
+  }
+
+  .simple-profile-upload {
+    margin-bottom: 20px;
+  }
+
+  .simple-form-group {
+    margin-bottom: 20px;
+  }
+
+  .simple-form-group label {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .simple-form-group input,
+  .simple-form-group textarea {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+  }
+
+  /* Analytics */
+  .analytics-grid {
+    gap: 15px;
+  }
+
+  .student-selector {
+    padding: 15px;
+  }
+
+  .student-selector h3 {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+
+  .student-profile-card {
+    padding: 15px;
+  }
+
+  .student-profile-name {
+    font-size: 20px;
+  }
+
+  .student-profile-details {
+    font-size: 13px;
+  }
+
+  .student-stats {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .stat-item {
+    width: 100%;
+  }
+
+  .chart-container {
+    padding: 15px;
+  }
+
+  .chart-container h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .chart-wrapper {
+    height: 250px;
+  }
+
+  /* Knowledge Base */
+  .upload-section {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+
+  .upload-section h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .upload-buttons {
+    gap: 12px;
+  }
+
+  .upload-btn {
+    padding: 20px 15px;
+  }
+
+  .upload-btn-text {
+    font-size: 16px;
+  }
+
+  .upload-btn-subtext {
+    font-size: 12px;
+  }
+
+  .uploaded-files-section {
+    padding: 15px;
+  }
+
+  .uploaded-files-section h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .files-grid {
+    gap: 12px;
+  }
+
+  .file-card {
+    padding: 15px;
+  }
+
+  .file-card-name {
+    font-size: 14px;
+  }
+
+  .file-card-meta {
+    font-size: 12px;
+  }
+
+  .file-card-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .file-btn {
+    width: 100%;
+  }
+
+  /* Action Buttons */
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn-large,
+  .btn-proceed {
+    width: 100%;
+  }
+
+  /* Uploaded File Banner */
+  .uploaded-file-banner {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .uploaded-file-banner-left {
+    width: 100%;
+  }
+
+  /* Decorative Elements - Hide on mobile for performance */
+  .main-app-circle-1,
+  .main-app-circle-2,
+  .main-app-circle-3,
+  .main-app-circle-4,
+  .main-app-circle-5,
+  .main-app-circle-6,
+  .main-app-circle-7 {
+    display: none;
+  }
+
+  .main-app-grid-line {
+    display: none;
+  }
+
+  /* Touch-friendly improvements */
+  button,
+  .sidebar-menu-link,
+  .task-card-subject,
+  .content-type-card,
+  .quick-select-btn,
+  .question-type-card {
+    min-height: 44px; /* Minimum touch target size */
+  }
+
+  /* Better spacing for touch */
+  .home-cards-container,
+  .content-type-grid,
+  .question-type-grid,
+  .quick-select-grid {
+    gap: 12px;
+  }
+
+  /* Improved scrolling */
+  .main-content {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Extra Small Mobile Devices (360px and below) */
+@media (max-width: 360px) {
+  .main-content {
+    padding: 10px 5px;
+    padding-top: 55px;
+  }
+
+  .home-section-wrapper {
+    padding: 10px 5px;
+  }
+
+  .home-greeting {
+    font-size: 18px;
+  }
+
+  .step-title {
+    font-size: 18px;
+  }
+
+  .content-type-name {
+    font-size: 18px;
+  }
+
+  .form-question {
+    font-size: 11px;
+  }
+
+  .quick-select-btn {
+    min-width: 100%;
+    font-size: 11px;
+  }
+
+  .question-type-name {
+    font-size: 10px;
+  }
+}
+
+/* Landscape Orientation for Tablets */
+@media (max-width: 1024px) and (orientation: landscape) {
+  .sidebar {
+    width: 80px;
+  }
+
+  .sidebar-header h1,
+  .sidebar-header p {
+    display: none;
+  }
+
+  .sidebar-menu-link .icon + span {
+    display: none;
+  }
+
+  .main-content {
+    margin-left: 80px;
+  }
+}
+
+/* Accessibility Improvements */
+@media (max-width: 768px) {
+  /* Better focus states for mobile */
+  button:focus,
+  .sidebar-menu-link:focus,
+  .quick-select-btn:focus,
+  .question-type-card:focus {
+    outline: 3px solid #4a7c7c;
+    outline-offset: 2px;
+  }
+
+  /* Prevent text size adjustment on iOS */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .sidebar,
+  .mobile-menu-toggle,
+  .mobile-overlay,
+  .step-back-btn,
+  .btn-back-home,
+  .btn-create-final,
+  .action-buttons {
+    display: none;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 0;
+  }
+
+  .content-section {
+    display: block !important;
+  }
+
+  .form-row {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
