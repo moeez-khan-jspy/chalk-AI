@@ -27,7 +27,7 @@ export default function Footer() {
                   </div>
                   {/* Logo Text */}
                   <div className="flex flex-col -ml-1">
-                    <span className="footer-logo-text">CHALK AI</span>
+                    <span className="footer-logo-text">TECH TEACH</span>
                     <span className="footer-logo-subtext">formerly Quizizz</span>
                   </div>
                 </div>

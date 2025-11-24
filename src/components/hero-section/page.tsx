@@ -11,7 +11,7 @@ export default function HeroSection() {
             New name. Same commitment to helping every student find a <em className="italic font-medium">way</em>.
           </span>
           <a href="#" className="hero-banner-link flex items-center gap-1.5 font-semibold text-sm transition-opacity">
-            Chalk AI FAQ
+            Tech Teach FAQ
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 4l4 4-4 4"/>
             </svg>
@@ -38,7 +38,7 @@ export default function HeroSection() {
               {/* Logo Text */}
               <div className="flex flex-col -ml-1">
                 <span className="hero-logo-text font-black leading-none tracking-tight">
-                  CHALK AI
+                  TECH TEACH
                 </span>
                 <span className="hero-logo-subtext text-[11px] tracking-wide -mt-0.5">formerly Quizizz</span>
               </div>
@@ -135,9 +135,9 @@ export default function HeroSection() {
             <div className="hero-title-line-1 text-white font-normal mb-2 tracking-tight leading-tight">
               
             </div>
-            {/* Second line - CHALK AI */}
+            {/* Second line - TECH TEACH */}
             <div className="hero-title-line-2 font-black leading-none">
-              <span className="typewriter-text">CHALK AI</span>
+              <span className="typewriter-text">TECH TEACH</span>
             </div>
           </h1>
 

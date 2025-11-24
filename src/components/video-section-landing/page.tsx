@@ -3,7 +3,7 @@ export default function VideoSectionLanding() {
     <section className="video-section-landing">
       <div className="video-section-container">
         <div className="video-section-header">
-          <h2 className="video-section-title">See Chalk AI in Action</h2>
+          <h2 className="video-section-title">See Tech Teach in Action</h2>
           <p className="video-section-subtitle">
             Watch how our AI-powered tool transforms the way teachers create lesson plans, assessments, and homework
           </p>

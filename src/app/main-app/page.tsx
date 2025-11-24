@@ -2954,7 +2954,7 @@ const MainAppPage: React.FC = () => {
             resetHomeFlow();
           }}
         >
-          <h1>Chalk AI</h1>
+          <h1>Tech Teach</h1>
           <p>Teacher Dashboard</p>
         </div>
         <ul className="sidebar-menu">
