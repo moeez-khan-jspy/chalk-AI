@@ -993,8 +993,17 @@ main footer {
 }
 
 .task-icon-lesson {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  background-color: #ff6b35;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
   color: white;
+}
+
+.task-icon-lesson svg {
+  width: 20px;
+  height: 20px;
+  stroke: white;
 }
 
 .task-icon-assessment {
@@ -1039,16 +1048,20 @@ main footer {
 }
 
 .task-arrow-btn {
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: #e5e5e5;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1f2937;
+  color: #000000;
   transition: all 0.2s;
   pointer-events: none;
+}
+
+.task-arrow-btn svg {
+  fill: #000000;
 }
 
 .task-card-subject:hover:not(.disabled) .task-arrow-btn {
@@ -1061,6 +1074,54 @@ main footer {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+/* Lesson Plan Preview Box */
+.lesson-plan-preview-box {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.lesson-plan-preview-card {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lesson-plan-preview-card-number {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 24px;
+  height: 24px;
+  background-color: #4a4a4a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.lesson-plan-preview-card svg {
+  width: 32px;
+  height: 32px;
+}
+
+.lesson-plan-preview-card svg[stroke] {
+  stroke: #9a9a9a;
+  stroke-width: 2;
+}
+
+.lesson-plan-preview-card svg[fill] {
+  fill: #9a9a9a;
 }
 
 /* Assessment Preview Box */
@@ -5018,6 +5079,11 @@ main footer {
   margin-bottom: 12px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Light yellow background for lesson plan card description */
+.task-card-lesson .lesson-type-description {
+  background-color: rgba(255, 255, 240, 0.8);
 }
 
 .lesson-type-title {
