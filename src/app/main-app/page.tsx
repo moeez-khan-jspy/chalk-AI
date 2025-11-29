@@ -11,6 +11,7 @@ import Tasks from '@/components/tasks/page';
 import ContentTypeSelection from '@/components/content-type/page';
 import LessonPlanDetails from '@/components/lesson-plan-details/page';
 import ResourceUploader from '@/components/resource-uploader/page';
+import { apiClient, GenerateContentResponse, VideoStatusResponse } from '@/lib/api/client';
 
 Chart.register(...registerables);
 
@@ -332,22 +333,43 @@ const MainAppPage: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Generating...");
+  const [error, setError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Flashcards
+  // Backend response data
+  const [backendResponse, setBackendResponse] = useState<GenerateContentResponse | null>(null);
+
+  // Flashcards - using state to allow backend updates
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [flashcardFlipped, setFlashcardFlipped] = useState(false);
+  const [currentFlashcardsData, setCurrentFlashcardsData] = useState(flashcardsData);
 
-  // Presentation
+  // Presentation - using state to allow backend updates
   const [slideIndex, setSlideIndex] = useState(0);
+  const [currentSlideImages, setCurrentSlideImages] = useState(slideImages);
+
+  // PDF - using state to allow backend updates
+  const [generatedPdfUrl, setGeneratedPdfUrl] = useState<string | null>(null);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+
+  // Mind Map - using state to allow backend updates
+  const [mindMapData, setMindMapData] = useState<any>(null);
+  const [mindMapExpandedNodes, setMindMapExpandedNodes] = useState<Set<string>>(new Set());
+  const [svgTransform, setSvgTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isClickingNode, setIsClickingNode] = useState(false);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   // Video
   const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  // Mind Map
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+  const [videoProgress, setVideoProgress] = useState<number>(0);
+  const [videoStage, setVideoStage] = useState<string>('');
+  const [videoMessage, setVideoMessage] = useState<string>('');
+  const [videoResult, setVideoResult] = useState<VideoStatusResponse['result'] | null>(null);
 
   // Profile
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -648,10 +670,18 @@ const MainAppPage: React.FC = () => {
     setFlashcardIndex(0);
     setFlashcardFlipped(false);
     setSlideIndex(0);
+    setGeneratedPdfUrl(null);
+    setPdfBase64(null);
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
     }
+    // Reset video generation state
+    setGeneratedVideoUrl(null);
+    setVideoProgress(0);
+    setVideoStage('');
+    setVideoMessage('');
+    setVideoResult(null);
   };
 
   const handleSelectTask = (task: TaskType) => {
@@ -747,8 +777,52 @@ const MainAppPage: React.FC = () => {
     );
   };
 
-  const handleFinalCreation = () => {
-    if (!selectedContentType) return;
+  const handleFinalCreation = async () => {
+    if (!selectedContentType || !selectedTask) return;
+
+    // Map frontend content types to backend tool names
+    const toolNameMap: Record<ContentType, string> = {
+      flashcard: "flashcards",
+      video: "ppt_video",
+      pdf: "pdf",
+      presentation: "presentation",
+      mindmap: "mind_map",
+    };
+
+    // Map frontend task types to backend task names
+    const taskNameMap: Record<TaskType, string> = {
+      "lesson-plan": "lesson_plan",
+      assessment: "assessment_generation",
+      homework: "homework_generation",
+    };
+
+    const toolName = toolNameMap[selectedContentType] as
+      | "pdf"
+      | "presentation"
+      | "mind_map"
+      | "ppt_video"
+      | "flashcards";
+    const taskName = taskNameMap[selectedTask] as
+      | "lesson_plan"
+      | "assessment_generation"
+      | "homework_generation";
+
+    // Build instructions from form data
+    const instructionsParts: string[] = [];
+    if (grade) instructionsParts.push(`Grade Level: ${grade}`);
+    if (duration) instructionsParts.push(`Duration: ${duration}`);
+    if (questionTypes.length > 0)
+      instructionsParts.push(`Question Types: ${questionTypes.join(", ")}`);
+    if (teachingMethods.length > 0)
+      instructionsParts.push(`Teaching Methods: ${teachingMethods.join(", ")}`);
+    if (learningMethods.length > 0)
+      instructionsParts.push(`Learning Methods: ${learningMethods.join(", ")}`);
+    if (teachingPhilosophy)
+      instructionsParts.push(`Teaching Philosophy: ${teachingPhilosophy}`);
+    if (bloomsTaxonomy.length > 0)
+      instructionsParts.push(`Bloom's Taxonomy: ${bloomsTaxonomy.join(", ")}`);
+
+    const instructions = instructionsParts.join(". ") || "Generate educational content";
 
     let targetView: HomeView | null = null;
     let text = "Generating content...";
@@ -771,7 +845,6 @@ const MainAppPage: React.FC = () => {
     }
 
     if (!targetView) {
-      // Other future types: simple success
       // eslint-disable-next-line no-alert
       alert(
         `Content Created Successfully!\n\nYour ${selectedTask} with ${selectedContentType} has been created.\n\nAll details have been saved and students will be notified.`,
@@ -782,10 +855,209 @@ const MainAppPage: React.FC = () => {
 
     setLoadingText(text);
     setIsLoading(true);
-    setTimeout(() => {
+    setError(null);
+
+    // Handle video generation with background task approach
+    if (selectedContentType === "video") {
+      try {
+        // Get source content from uploaded file if available
+        let sourceContent: string | undefined = undefined;
+        if (uploadMode === "upload" && uploadInputRef.current?.files?.[0]) {
+          const file = uploadInputRef.current.files[0];
+          // Read file as text for source content
+          sourceContent = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string || '');
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+          });
+        }
+
+        // Start video generation with progress callback
+        const videoStatus = await apiClient.generateVideoWithProgress(
+          {
+            instructions: instructions,
+            source_content: sourceContent,
+          },
+          (progress, stage, message) => {
+            // Update loading text with progress
+            setLoadingText(`${message} (${progress}%)`);
+            setVideoProgress(progress);
+            setVideoStage(stage);
+            setVideoMessage(message);
+          },
+          2000 // Poll every 2 seconds
+        );
+
+        // Video generation complete
+        if (videoStatus.result) {
+          setVideoResult(videoStatus.result);
+          
+          // Build video URL from file_url
+          if (videoStatus.file_url) {
+            let videoUrl: string;
+            if (videoStatus.file_url.includes('http')) {
+              videoUrl = videoStatus.file_url;
+            } else {
+              // Extract filename and build download URL
+              const filename = videoStatus.file_url.split('/').pop() || videoStatus.file_url;
+              videoUrl = apiClient.getDownloadUrl(filename);
+            }
+            setGeneratedVideoUrl(videoUrl);
+          }
+        }
+
+        setIsLoading(false);
+        setHomeView("video");
+        setHomeStep(1);
+        
+        if (videoRef.current) {
+          videoRef.current.currentTime = 0;
+        }
+
+        return;
+      } catch (err) {
+        setIsLoading(false);
+        const errorMessage = err instanceof Error ? err.message : "Failed to generate video. Please try again.";
+        setError(errorMessage);
+        alert(`Error: ${errorMessage}`);
+        return;
+      }
+    }
+
+    try {
+      let response: GenerateContentResponse;
+
+      // Check if we have an uploaded file
+      if (uploadMode === "upload" && uploadInputRef.current?.files?.[0]) {
+        // Use file upload endpoint
+        const file = uploadInputRef.current.files[0];
+        response = await apiClient.generateWithUpload({
+          task_name: taskName,
+          tool_name: toolName,
+          instructions: instructions,
+          pdf_file: file,
+        });
+      } else if (uploadMode === "knowledge" && kbSelectedFiles.length > 0) {
+        // For knowledge base files, we'd need to fetch them first
+        // For now, use the regular endpoint with instructions
+        response = await apiClient.generateContent({
+          task_name: taskName,
+          tool_name: toolName,
+          instructions: `${instructions}. Use knowledge base files: ${kbSelectedFiles.join(", ")}`,
+        });
+      } else {
+        // Use regular JSON endpoint
+        response = await apiClient.generateContent({
+          task_name: taskName,
+          tool_name: toolName,
+          instructions: instructions,
+        });
+      }
+
+      // Store the response
+      setBackendResponse(response);
+
+      // Process response data based on content type
+      if (response.data) {
+        if (targetView === "flashcards") {
+          // Handle flashcards - backend returns response.data.flashcards array
+          let flashcards: any[] = [];
+          
+          // Primary structure: response.data.flashcards (as per backend API)
+          if (response.data.flashcards && Array.isArray(response.data.flashcards)) {
+            flashcards = response.data.flashcards;
+          } else if (Array.isArray(response.data)) {
+            // Fallback: if data itself is an array
+            flashcards = response.data;
+          }
+          
+          if (flashcards.length > 0) {
+            // Format flashcards - backend provides question and answer directly
+            const formattedFlashcards = flashcards.map((card: any) => ({
+              question: card.question || 'Question',
+              answer: card.answer || 'Answer',
+            }));
+            setCurrentFlashcardsData(formattedFlashcards);
+          }
+        } else if (targetView === "presentation") {
+          // Handle presentation slides - backend returns response.data.slides array with image_base64
+          let slides: string[] = [];
+          
+          // Primary structure: response.data.slides (as per backend API)
+          if (response.data.slides && Array.isArray(response.data.slides)) {
+            // Convert base64 images to data URLs
+            slides = response.data.slides
+              .map((slide: any) => {
+                // Backend provides image_base64 property
+                if (slide.image_base64) {
+                  return `data:image/png;base64,${slide.image_base64}`;
+                }
+                // Fallback: if slide is already a URL string
+                if (typeof slide === 'string') {
+                  return slide;
+                }
+                // Fallback: if slide object has url property
+                if (slide.url) {
+                  return slide.url;
+                }
+                return null;
+              })
+              .filter((url: string | null): url is string => url !== null && url.trim() !== '');
+          }
+          
+          if (slides.length > 0) {
+            setCurrentSlideImages(slides);
+          }
+        } else if (targetView === "pdf") {
+          // Handle PDF - backend can return file_url or base64 data
+          if (response.data?.pdf_base64) {
+            // PDF as base64 data (in-memory, not saved on server)
+            console.log('PDF base64 data received');
+            setPdfBase64(response.data.pdf_base64);
+            setGeneratedPdfUrl(null);
+          } else if (response.file_url) {
+            // PDF as file URL (saved on server)
+            // Extract filename from file_url (could be full URL or just filename)
+            let filename = response.file_url;
+            if (filename.includes('/')) {
+              filename = filename.split('/').pop() || filename;
+            }
+            
+            // Build the download URL
+            let pdfUrl: string;
+            if (response.file_url.includes('http')) {
+              // Full URL provided
+              pdfUrl = response.file_url;
+            } else {
+              // Just filename, build download URL
+              pdfUrl = apiClient.getDownloadUrl(filename);
+            }
+            
+            console.log('PDF URL set:', pdfUrl);
+            setGeneratedPdfUrl(pdfUrl);
+            setPdfBase64(null);
+          } else {
+            console.warn('No file_url or pdf_base64 in PDF response');
+            setGeneratedPdfUrl(null);
+            setPdfBase64(null);
+          }
+        } else if (targetView === "mindmap") {
+          // Handle mind map - backend returns response.data.mind_map object
+          if (response.data.mind_map) {
+            console.log('Mind map data received:', response.data.mind_map);
+            setMindMapData(response.data.mind_map);
+          } else {
+            console.warn('No mind_map data in response');
+          }
+        }
+      }
+
       setIsLoading(false);
       setHomeView(targetView as HomeView);
       setHomeStep(1);
+
+      // Reset content-specific states
       if (targetView === "flashcards") {
         setFlashcardIndex(0);
         setFlashcardFlipped(false);
@@ -794,7 +1066,14 @@ const MainAppPage: React.FC = () => {
       } else if (targetView === "video" && videoRef.current) {
         videoRef.current.currentTime = 0;
       }
-    }, 3000);
+    } catch (err) {
+      setIsLoading(false);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to generate content. Please try again.";
+      setError(errorMessage);
+      // eslint-disable-next-line no-alert
+      alert(`Error: ${errorMessage}`);
+    }
   };
 
   const handleDetailsSubmit = (e: FormEvent) => {
@@ -813,7 +1092,7 @@ const MainAppPage: React.FC = () => {
 
   const goToNextFlashcard = () => {
     setFlashcardIndex((prev) =>
-      prev < flashcardsData.length - 1 ? prev + 1 : prev,
+      prev < currentFlashcardsData.length - 1 ? prev + 1 : prev,
     );
     setFlashcardFlipped(false);
   };
@@ -825,7 +1104,7 @@ const MainAppPage: React.FC = () => {
 
   const goToNextSlide = () => {
     setSlideIndex((prev) =>
-      prev < slideImages.length - 1 ? prev + 1 : prev,
+      prev < currentSlideImages.length - 1 ? prev + 1 : prev,
     );
   };
 
@@ -1013,7 +1292,35 @@ const MainAppPage: React.FC = () => {
   );
 
   const renderFlashcardsSection = () => {
-    const card = flashcardsData[flashcardIndex];
+    // Ensure we have valid data
+    if (!currentFlashcardsData || currentFlashcardsData.length === 0) {
+      return (
+        <section
+          id="flashcardsSection"
+          className="content-section flashcards-section active"
+        >
+          <div className="flashcards-wrapper">
+            <div className="flashcards-header">
+              <h2 className="flashcards-title">Your Flashcards</h2>
+              <p className="flashcards-subtitle">
+                No flashcards available. Please generate content first.
+              </p>
+            </div>
+            <div className="flashcards-actions">
+              <button
+                type="button"
+                className="btn-back-home"
+                onClick={handleGoBackToHomeView}
+              >
+                Back to Home
+              </button>
+            </div>
+          </div>
+        </section>
+      );
+    }
+    
+    const card = currentFlashcardsData[flashcardIndex];
     return (
       <section
         id="flashcardsSection"
@@ -1027,7 +1334,7 @@ const MainAppPage: React.FC = () => {
             </p>
             <div className="flashcard-counter">
               <span id="currentCard">{flashcardIndex + 1}</span> /{" "}
-              <span id="totalCards">{flashcardsData.length}</span>
+              <span id="totalCards">{currentFlashcardsData.length}</span>
             </div>
           </div>
 
@@ -1078,7 +1385,7 @@ const MainAppPage: React.FC = () => {
               id="nextBtn"
               className="nav-btn"
               onClick={goToNextFlashcard}
-              disabled={flashcardIndex === flashcardsData.length - 1}
+              disabled={flashcardIndex === currentFlashcardsData.length - 1}
             >
               Next
             </button>
@@ -1098,76 +1405,199 @@ const MainAppPage: React.FC = () => {
     );
   };
 
-  const renderPdfViewerSection = () => (
-    <section
-      id="pdfViewerSection"
-      className="content-section pdf-viewer-section active"
-    >
-      <div className="pdf-viewer-wrapper">
-        <div className="pdf-viewer-header">
-          <h2 className="pdf-viewer-title">Your PDF Document</h2>
-          <p className="pdf-viewer-subtitle">
-            Preview and download your generated content
-          </p>
+  const renderPdfViewerSection = () => {
+    // Determine PDF source: base64 data URL or file URL
+    let pdfDataUrl: string | null = null;
+    let pdfSourceUrl: string | null = null;
+    let filename = "generated_content.pdf";
+    
+    if (pdfBase64) {
+      // Create data URL from base64
+      pdfDataUrl = `data:application/pdf;base64,${pdfBase64}`;
+      pdfSourceUrl = pdfDataUrl;
+      filename = "document.pdf";
+    } else if (generatedPdfUrl) {
+      // Use file URL
+      pdfSourceUrl = generatedPdfUrl;
+      // Extract filename for download
+      filename = backendResponse?.file_url 
+        ? (backendResponse.file_url.includes('/') 
+            ? backendResponse.file_url.split('/').pop() 
+            : backendResponse.file_url) || "generated_content.pdf"
+        : "generated_content.pdf";
+    } else {
+      // Fallback to static file (for demo purposes)
+      pdfSourceUrl = "/Photosynthesis Pdf.pdf";
+      filename = "Photosynthesis_Educational_Content.pdf";
+    }
+    
+    // Helper function to download base64 PDF
+    const downloadBase64Pdf = () => {
+      if (!pdfBase64) return;
+      
+      // Convert base64 to blob and download
+      const byteCharacters = atob(pdfBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+    
+    return (
+      <section
+        id="pdfViewerSection"
+        className="content-section pdf-viewer-section active"
+      >
+        <div className="pdf-viewer-wrapper">
+          <div className="pdf-viewer-header">
+            <h2 className="pdf-viewer-title">Your PDF Document</h2>
+            <p className="pdf-viewer-subtitle">
+              Preview and download your generated content
+            </p>
+            {pdfBase64 && (
+              <div style={{ 
+                marginTop: '10px', 
+                padding: '10px 15px', 
+                background: 'rgba(96, 165, 250, 0.1)', 
+                borderRadius: '8px',
+                fontSize: '14px',
+                color: '#60a5fa'
+              }}>
+                📄 PDF generated in memory - not saved on server
+              </div>
+            )}
+          </div>
+          <div className="pdf-display-container">
+            {pdfSourceUrl ? (
+              <>
+                <iframe
+                  id="pdfFrame"
+                  src={pdfSourceUrl}
+                  title="PDF preview"
+                  className="pdf-frame"
+                  style={{ 
+                    width: '100%', 
+                    height: '600px', 
+                    border: 'none', 
+                    borderRadius: '12px',
+                    display: 'block',
+                    background: '#ffffff'
+                  }}
+                  onLoad={() => console.log('PDF iframe loaded:', pdfSourceUrl)}
+                />
+              </>
+            ) : (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                <p>No PDF available. Please generate content first.</p>
+                {backendResponse && (
+                  <div style={{ marginTop: '20px', padding: '15px', background: '#f0f0f0', borderRadius: '8px' }}>
+                    <strong>Response Status:</strong> {backendResponse.status}<br/>
+                    <strong>Message:</strong> {backendResponse.message}<br/>
+                    {backendResponse.file_url && <><strong>File URL:</strong> {backendResponse.file_url}</>}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="pdf-viewer-actions">
+            <button
+              type="button"
+              className="btn-pdf-action btn-download-pdf"
+              onClick={() => {
+                if (pdfBase64) {
+                  downloadBase64Pdf();
+                } else if (pdfSourceUrl) {
+                  const link = document.createElement("a");
+                  link.href = pdfSourceUrl;
+                  link.download = filename;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }
+              }}
+            >
+              Download PDF
+            </button>
+            <button
+              type="button"
+              className="btn-pdf-action btn-print-pdf"
+              onClick={() => {
+                const frame =
+                  document.getElementById(
+                    "pdfFrame",
+                  ) as HTMLIFrameElement | null;
+                frame?.contentWindow?.print();
+              }}
+            >
+              Print
+            </button>
+            <button
+              type="button"
+              className="btn-pdf-action btn-open-new"
+              onClick={() => {
+                if (pdfSourceUrl) {
+                  window.open(pdfSourceUrl, "_blank");
+                }
+              }}
+            >
+              Open in New Tab
+            </button>
+            <button
+              type="button"
+              className="btn-pdf-action btn-back-home-pdf"
+              onClick={handleGoBackToHomeView}
+            >
+              Back to Home
+            </button>
+          </div>
         </div>
-        <div className="pdf-display-container">
-          <iframe
-            id="pdfFrame"
-            src="/Photosynthesis Pdf.pdf"
-            title="PDF preview"
-          />
-        </div>
-        <div className="pdf-viewer-actions">
-          <button
-            type="button"
-            className="btn-pdf-action btn-download-pdf"
-            onClick={() => {
-              const link = document.createElement("a");
-              link.href = "/Photosynthesis Pdf.pdf";
-              link.download = "Photosynthesis_Educational_Content.pdf";
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }}
-          >
-            Download PDF
-          </button>
-          <button
-            type="button"
-            className="btn-pdf-action btn-print-pdf"
-            onClick={() => {
-              const frame =
-                document.getElementById(
-                  "pdfFrame",
-                ) as HTMLIFrameElement | null;
-              frame?.contentWindow?.print();
-            }}
-          >
-            Print
-          </button>
-          <button
-            type="button"
-            className="btn-pdf-action btn-open-new"
-            onClick={() =>
-              window.open("/Photosynthesis Pdf.pdf", "_blank")
-            }
-          >
-            Open in New Tab
-          </button>
-          <button
-            type="button"
-            className="btn-pdf-action btn-back-home-pdf"
-            onClick={handleGoBackToHomeView}
-          >
-            Back to Home
-          </button>
-        </div>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  };
 
   const renderPresentationViewerSection = () => {
-    const slideSrc = slideImages[slideIndex];
+    // Ensure we have valid data
+    if (!currentSlideImages || currentSlideImages.length === 0) {
+      return (
+        <section
+          id="presentationViewerSection"
+          className="content-section presentation-viewer-section active"
+        >
+          <div className="presentation-viewer-wrapper">
+            <div className="presentation-viewer-header">
+              <h2 className="presentation-viewer-title">Your Presentation</h2>
+              <p className="presentation-viewer-subtitle">
+                No slides available. Please generate content first.
+              </p>
+            </div>
+            <div className="presentation-viewer-actions">
+              <button
+                type="button"
+                className="btn-presentation-action btn-back-home-pres"
+                onClick={handleGoBackToHomeView}
+              >
+                Back to Home
+              </button>
+            </div>
+          </div>
+        </section>
+      );
+    }
+    
+    // Slides are already formatted as data URLs (base64) or regular URLs
+    const slideSrc = currentSlideImages[slideIndex];
+    
     return (
       <section
         id="presentationViewerSection"
@@ -1176,7 +1606,7 @@ const MainAppPage: React.FC = () => {
         <div className="presentation-viewer-wrapper">
           <div className="presentation-viewer-header">
             <h2 className="presentation-viewer-title">
-              Photosynthesis Presentation
+              Your Presentation
             </h2>
             <p className="presentation-viewer-subtitle">
               Navigate through your educational slides
@@ -1184,12 +1614,27 @@ const MainAppPage: React.FC = () => {
           </div>
 
           <div className="presentation-container">
-            <div id="slideDisplay" className="slide-display">
-              <img src={slideSrc} alt={`Slide ${slideIndex + 1}`} />
+            <div id="slideDisplay" className={`slide-display ${backendResponse ? 'backend-slide' : ''}`}>
+              {slideSrc && slideSrc.trim() !== '' ? (
+                <img 
+                  src={slideSrc} 
+                  alt={`Slide ${slideIndex + 1}`}
+                  className={backendResponse ? 'backend-generated-image' : ''}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    console.error('Failed to load slide image:', slideSrc);
+                    target.style.display = 'none';
+                  }} 
+                />
+              ) : (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                  <p>No slide image available</p>
+                </div>
+              )}
             </div>
             <div className="slide-counter">
               <span id="currentSlide">{slideIndex + 1}</span> /{" "}
-              <span id="totalSlides">{slideImages.length}</span>
+              <span id="totalSlides">{currentSlideImages.length}</span>
             </div>
           </div>
 
@@ -1218,7 +1663,7 @@ const MainAppPage: React.FC = () => {
               id="nextSlideBtn"
               className="nav-btn-pres"
               onClick={goToNextSlide}
-              disabled={slideIndex === slideImages.length - 1}
+              disabled={slideIndex === currentSlideImages.length - 1}
             >
               Next
             </button>
@@ -1262,538 +1707,579 @@ const MainAppPage: React.FC = () => {
     );
   };
 
-  const renderVideoPlayerSection = () => (
-    <section
-      id="videoPlayerSection"
-      className="content-section video-player-section active"
-    >
-      <div className="video-player-wrapper">
-        <div className="video-player-header">
-          <h2 className="video-player-title">Your Video Content</h2>
-          <p className="video-player-subtitle">
-            Watch your generated educational video
-          </p>
-        </div>
-        <div className="video-container">
-          <video
-            id="mainVideo"
-            ref={videoRef}
-            controls
-            controlsList="nodownload"
-          >
-            <source src="/ppt.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
-        </div>
-        <div className="video-controls-section">
-          <div className="video-info">
-            <h3 className="video-info-title">
-              Educational Content Video
-            </h3>
-            <p className="video-info-description">
-              This video contains the educational content you've
-              created. Use the controls to play, pause, and adjust the
-              volume.
+  const renderVideoPlayerSection = () => {
+    // Determine video source: generated URL or fallback to static
+    const videoSrc = generatedVideoUrl || "/ppt.mp4";
+    const isGeneratedVideo = !!generatedVideoUrl;
+    
+    return (
+      <section
+        id="videoPlayerSection"
+        className="content-section video-player-section active"
+      >
+        <div className="video-player-wrapper">
+          <div className="video-player-header">
+            <h2 className="video-player-title">Your Video Content</h2>
+            <p className="video-player-subtitle">
+              {isGeneratedVideo 
+                ? "Your AI-generated educational video is ready!"
+                : "Watch your generated educational video"}
             </p>
+            {isGeneratedVideo && videoResult && (
+              <div style={{ 
+                marginTop: '15px', 
+                padding: '12px 20px', 
+                background: 'rgba(52, 211, 153, 0.15)', 
+                borderRadius: '10px',
+                display: 'flex',
+                gap: '20px',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                fontSize: '14px',
+                color: '#34d399'
+              }}>
+                <span>📊 {videoResult.total_slides} slides</span>
+                <span>⏱️ {videoResult.duration_seconds}s duration</span>
+                <span>🔊 AI narration included</span>
+                <span>✅ Generated successfully</span>
+              </div>
+            )}
           </div>
-        </div>
-        <div className="video-player-actions">
-          <button
-            type="button"
-            className="btn-video-action btn-fullscreen"
-            onClick={toggleVideoFullscreen}
-          >
-            Fullscreen
-          </button>
-          <button
-            type="button"
-            className="btn-video-action btn-restart"
-            onClick={restartVideo}
-          >
-            Restart
-          </button>
-          <button
-            type="button"
-            className="btn-video-action btn-back-home-video"
-            onClick={handleGoBackToHomeView}
-          >
-            Back to Home
-          </button>
-        </div>
-      </div>
-    </section>
-  );
-
-  const renderMindMapSection = () => (
-    <section
-      id="mindMapSection"
-      className="content-section mindmap-viewer-section active"
-    >
-      <div className="mindmap-viewer-wrapper">
-        <div className="mindmap-viewer-header">
-          <h2 className="mindmap-viewer-title">Your Mind Map</h2>
-          <p className="mindmap-viewer-subtitle">
-            Visual representation of your lesson concepts
-          </p>
-        </div>
-        <div className="mindmap-container">
-          <div className="mindmap-display">
-            <svg
-              viewBox="0 0 1000 700"
-              className="mindmap-svg"
-              xmlns="http://www.w3.org/2000/svg"
+          <div className="video-container">
+            <video
+              id="mainVideo"
+              ref={videoRef}
+              controls
+              controlsList={isGeneratedVideo ? "" : "nodownload"}
+              preload="auto"
+              playsInline
+              key={videoSrc} // Force re-render when source changes
+              onLoadedData={() => {
+                // Ensure video is ready with audio
+                if (videoRef.current) {
+                  videoRef.current.volume = 1.0;
+                }
+              }}
             >
-              {/* Central Node */}
-              <circle
-                cx="500"
-                cy="350"
-                r="80"
-                fill="#4a7c7c"
-                stroke="#243838"
-                strokeWidth="3"
-                className="mindmap-node mindmap-node-central"
-              />
-              <text
-                x="500"
-                y="360"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="20"
-                fontWeight="700"
-                className="mindmap-text"
+              <source src={videoSrc} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            {isGeneratedVideo && (
+              <div style={{
+                position: 'absolute',
+                bottom: '60px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(0, 0, 0, 0.7)',
+                color: '#fff',
+                padding: '8px 16px',
+                borderRadius: '20px',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                pointerEvents: 'none',
+                opacity: 0.9,
+              }}>
+                <span>🔊</span>
+                <span>Video includes AI-generated voice narration</span>
+              </div>
+            )}
+          </div>
+          <div className="video-controls-section">
+            <div className="video-info">
+              <h3 className="video-info-title">
+                {isGeneratedVideo ? "AI-Generated Educational Video with Narration" : "Educational Content Video"}
+              </h3>
+              <p className="video-info-description">
+                {isGeneratedVideo 
+                  ? `This professional video features ${videoResult?.total_slides || 6} slides with synchronized AI voice narration for each slide. The audio is generated automatically to explain the content. Use the controls to play, pause, and adjust the volume.`
+                  : "This video contains the educational content you've created. Use the controls to play, pause, and adjust the volume."}
+              </p>
+              {isGeneratedVideo && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '10px 15px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#60a5fa',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}>
+                  <span style={{ fontSize: '18px' }}>🎙️</span>
+                  <span>Tip: Make sure your speakers are on to hear the AI narration</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="video-player-actions">
+            <button
+              type="button"
+              className="btn-video-action btn-fullscreen"
+              onClick={toggleVideoFullscreen}
+            >
+              Fullscreen
+            </button>
+            <button
+              type="button"
+              className="btn-video-action btn-restart"
+              onClick={restartVideo}
+            >
+              Restart
+            </button>
+            {isGeneratedVideo && (
+              <button
+                type="button"
+                className="btn-video-action btn-download-video"
+                onClick={() => {
+                  if (generatedVideoUrl) {
+                    // Create download link with download flag
+                    const downloadUrl = generatedVideoUrl.includes('?') 
+                      ? `${generatedVideoUrl}&download=true`
+                      : `${generatedVideoUrl}?download=true`;
+                    const link = document.createElement("a");
+                    link.href = downloadUrl;
+                    link.download = videoResult?.file_name || "generated_video.mp4";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #34d399, #059669)',
+                  border: 'none',
+                }}
               >
-                Photosynthesis
-              </text>
-
-              {/* Top Branch - Process */}
-              <line
-                x1="500"
-                y1="270"
-                x2="500"
-                y2="200"
-                stroke="#4a7c7c"
-                strokeWidth="3"
-                className="mindmap-line"
-              />
-              <circle
-                cx="500"
-                cy="150"
-                r="60"
-                fill="#70ad47"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="500"
-                y="160"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="16"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Process
-              </text>
-
-              {/* Top Left - Light */}
-              <line
-                x1="500"
-                y1="150"
-                x2="350"
-                y2="100"
-                stroke="#70ad47"
-                strokeWidth="2"
-                className="mindmap-line"
-              />
-              <circle
-                cx="300"
-                cy="80"
-                r="50"
-                fill="#ffc000"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="300"
-                y="88"
-                textAnchor="middle"
-                fill="#243838"
-                fontSize="14"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Light
-              </text>
-
-              {/* Top Right - Water */}
-              <line
-                x1="500"
-                y1="150"
-                x2="650"
-                y2="100"
-                stroke="#70ad47"
-                strokeWidth="2"
-                className="mindmap-line"
-              />
-              <circle
-                cx="700"
-                cy="80"
-                r="50"
-                fill="#5b9bd5"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="700"
-                y="88"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="14"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Water
-              </text>
-
-              {/* Left Branch - Reactants */}
-              <line
-                x1="420"
-                y1="350"
-                x2="300"
-                y2="350"
-                stroke="#4a7c7c"
-                strokeWidth="3"
-                className="mindmap-line"
-              />
-              <circle
-                cx="200"
-                cy="350"
-                r="60"
-                fill="#ed7d31"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="200"
-                y="360"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="16"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Reactants
-              </text>
-
-              {/* Left Top - CO2 */}
-              <line
-                x1="200"
-                y1="290"
-                x2="150"
-                y2="250"
-                stroke="#ed7d31"
-                strokeWidth="2"
-                className="mindmap-line"
-              />
-              <circle
-                cx="100"
-                cy="220"
-                r="45"
-                fill="#c55a8a"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="100"
-                y="228"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="13"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                CO₂
-              </text>
-
-              {/* Left Bottom - Minerals */}
-              <line
-                x1="200"
-                y1="410"
-                x2="150"
-                y2="450"
-                stroke="#ed7d31"
-                strokeWidth="2"
-                className="mindmap-line"
-              />
-              <circle
-                cx="100"
-                cy="480"
-                r="45"
-                fill="#c55a8a"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="100"
-                y="488"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="13"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Minerals
-              </text>
-
-              {/* Right Branch - Products */}
-              <line
-                x1="580"
-                y1="350"
-                x2="700"
-                y2="350"
-                stroke="#4a7c7c"
-                strokeWidth="3"
-                className="mindmap-line"
-              />
-              <circle
-                cx="800"
-                cy="350"
-                r="60"
-                fill="#70ad47"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="800"
-                y="360"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="16"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Products
-              </text>
-
-              {/* Right Top - Oxygen */}
-              <line
-                x1="800"
-                y1="290"
-                x2="850"
-                y2="250"
-                stroke="#70ad47"
-                strokeWidth="2"
-                className="mindmap-line"
-              />
-              <circle
-                cx="900"
-                cy="220"
-                r="45"
-                fill="#5b9bd5"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="900"
-                y="228"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="13"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                O₂
-              </text>
-
-              {/* Right Bottom - Glucose */}
-              <line
-                x1="800"
-                y1="410"
-                x2="850"
-                y2="450"
-                stroke="#70ad47"
-                strokeWidth="2"
-                className="mindmap-line"
-              />
-              <circle
-                cx="900"
-                cy="480"
-                r="45"
-                fill="#ffc000"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="900"
-                y="488"
-                textAnchor="middle"
-                fill="#243838"
-                fontSize="13"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Glucose
-              </text>
-
-              {/* Bottom Branch - Importance */}
-              <line
-                x1="500"
-                y1="430"
-                x2="500"
-                y2="550"
-                stroke="#4a7c7c"
-                strokeWidth="3"
-                className="mindmap-line"
-              />
-              <circle
-                cx="500"
-                cy="600"
-                r="60"
-                fill="#9c27b0"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="500"
-                y="610"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="16"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Importance
-              </text>
-
-              {/* Bottom Left - Life */}
-              <line
-                x1="440"
-                y1="600"
-                x2="380"
-                y2="620"
-                stroke="#9c27b0"
-                strokeWidth="2"
-                className="mindmap-line"
-              />
-              <circle
-                cx="320"
-                cy="640"
-                r="45"
-                fill="#c55a8a"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="320"
-                y="648"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="13"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Life
-              </text>
-
-              {/* Bottom Right - Energy */}
-              <line
-                x1="560"
-                y1="600"
-                x2="620"
-                y2="620"
-                stroke="#9c27b0"
-                strokeWidth="2"
-                className="mindmap-line"
-              />
-              <circle
-                cx="680"
-                cy="640"
-                r="45"
-                fill="#c55a8a"
-                stroke="#243838"
-                strokeWidth="2"
-                className="mindmap-node"
-              />
-              <text
-                x="680"
-                y="648"
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="13"
-                fontWeight="600"
-                className="mindmap-text"
-              >
-                Energy
-              </text>
-            </svg>
+                Download Video
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn-video-action btn-back-home-video"
+              onClick={handleGoBackToHomeView}
+            >
+              Back to Home
+            </button>
           </div>
         </div>
-        <div className="mindmap-viewer-actions">
-          <button
-            type="button"
-            className="btn-mindmap-action btn-download-mindmap"
-            onClick={() => {
-              const svg = document.querySelector(".mindmap-svg");
-              if (svg) {
-                const svgData = new XMLSerializer().serializeToString(svg);
-                const blob = new Blob([svgData], {
-                  type: "image/svg+xml;charset=utf-8",
-                });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = "mindmap.svg";
-                link.click();
-                URL.revokeObjectURL(url);
+      </section>
+    );
+  };
+
+  // Toggle node expansion
+  const toggleNodeExpansion = (nodeId: string) => {
+    setMindMapExpandedNodes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle SVG drag
+  const handleSvgMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+    // Don't drag if clicking on a node or any element within a node group
+    const target = e.target as HTMLElement;
+    if (
+      target.classList.contains('mindmap-node') || 
+      target.classList.contains('mindmap-text') ||
+      target.classList.contains('mindmap-expand-icon') ||
+      target.closest('.mindmap-node-group')
+    ) {
+      setIsClickingNode(true);
+      e.stopPropagation();
+      return;
+    }
+    
+    setIsClickingNode(false);
+    if (e.button === 0) { // Left mouse button
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - svgTransform.x, y: e.clientY - svgTransform.y });
+      e.preventDefault();
+    }
+  };
+
+  const handleSvgMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (isDragging && !isClickingNode) {
+      setSvgTransform({
+        ...svgTransform,
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      });
+    }
+  };
+
+  const handleSvgMouseUp = () => {
+    setIsDragging(false);
+    setIsClickingNode(false);
+  };
+
+  // Handle wheel zoom
+  const handleSvgWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.max(0.5, Math.min(2, svgTransform.scale * delta));
+    setSvgTransform({ ...svgTransform, scale: newScale });
+  };
+
+  // Helper function to render mind map nodes dynamically - vertical layout
+  const renderMindMapNodes = (data: any): React.ReactNode => {
+    if (!data) return null;
+
+    // Single dark purple-blue color for all nodes (simple design)
+    const nodeColor = '#5b4a7c';
+
+    // Extract central topic and branches
+    let centralText = 'Main Topic';
+    let branches: any[] = [];
+
+    if (typeof data === 'object') {
+      if (data.topic) centralText = data.topic;
+      else if (data.title) centralText = data.title;
+      else if (data.central) centralText = data.central;
+      else if (data.name) centralText = data.name;
+      else if (data.label) centralText = data.label;
+      
+      branches = data.branches || data.children || data.subtopics || data.nodes || [];
+      
+      if (Array.isArray(data) && data.length > 0) {
+        centralText = data[0].name || data[0].title || data[0] || 'Main Topic';
+        branches = data.slice(1);
+      }
+      
+      if (data.root) {
+        centralText = data.root.name || data.root.title || data.root || 'Main Topic';
+        branches = data.branches || data.children || [];
+      }
+    } else if (typeof data === 'string') {
+      centralText = data;
+    }
+    
+    const nodes: React.ReactNode[] = [];
+    const lines: React.ReactNode[] = [];
+    
+    // Central node position - left side (smaller, simpler)
+    const centralX = 150;
+    const centralY = 350;
+    const centralWidth = 220;
+    const centralHeight = 70;
+    
+    // Central node - simple dark purple-blue style
+    nodes.push(
+      <g key="central" className="mindmap-node-group">
+        <rect
+          x={centralX}
+          y={centralY}
+          width={centralWidth}
+          height={centralHeight}
+          rx="8"
+          fill={nodeColor}
+          stroke="none"
+          className="mindmap-node mindmap-node-central"
+        />
+        <text
+          x={centralX + centralWidth / 2}
+          y={centralY + centralHeight / 2 + 5}
+          textAnchor="middle"
+          fill="#ffffff"
+          fontSize="16"
+          fontWeight="700"
+          className="mindmap-text"
+          style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+        >
+          {centralText}
+        </text>
+      </g>
+    );
+
+    // Render branches vertically on the right side (smaller, compact)
+    if (branches.length > 0) {
+      const branchStartX = centralX + centralWidth + 80;
+      const branchStartY = 180;
+      const branchSpacing = 100;
+      const branchWidth = 220;
+      const branchHeight = 60;
+
+      branches.forEach((branch: any, index: number) => {
+        const branchY = branchStartY + index * branchSpacing;
+        const branchX = branchStartX;
+        const branchText = branch.name || branch.title || branch.topic || branch.label || `Branch ${index + 1}`;
+        const nodeId = `branch-${index}`;
+        const isExpanded = mindMapExpandedNodes.has(nodeId);
+        const subBranches = branch.children || branch.subtopics || branch.nodes || [];
+        const hasSubBranches = subBranches.length > 0;
+
+        // Curved line from center to branch
+        const startX = centralX + centralWidth;
+        const startY = centralY + centralHeight / 2;
+        const endX = branchX;
+        const endY = branchY + branchHeight / 2;
+        const controlX = (startX + endX) / 2;
+        const controlY1 = startY;
+        const controlY2 = endY;
+        
+        lines.push(
+          <path
+            key={`line-${index}`}
+            d={`M ${startX} ${startY} C ${controlX} ${controlY1}, ${controlX} ${controlY2}, ${endX} ${endY}`}
+            stroke={nodeColor}
+            strokeWidth="2"
+            fill="none"
+            className="mindmap-line"
+          />
+        );
+
+        // Branch node - simple dark purple-blue style
+        nodes.push(
+          <g 
+            key={`branch-${index}`} 
+            className="mindmap-node-group"
+            style={{ cursor: hasSubBranches ? 'pointer' : 'default' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsClickingNode(true);
+              if (hasSubBranches) {
+                toggleNodeExpansion(nodeId);
               }
             }}
           >
-            <IconUpload />
-            Download Mind Map
-          </button>
-          <button
-            type="button"
-            className="btn-mindmap-action btn-print-mindmap"
-            onClick={() => window.print()}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ width: "18px", height: "18px" }}
+            <rect
+              x={branchX}
+              y={branchY}
+              width={branchWidth}
+              height={branchHeight}
+              rx="8"
+              fill={nodeColor}
+              stroke="none"
+              className="mindmap-node"
+            />
+            <text
+              x={branchX + branchWidth / 2}
+              y={branchY + branchHeight / 2 + 5}
+              textAnchor="middle"
+              fill="#ffffff"
+              fontSize="14"
+              fontWeight="600"
+              className="mindmap-text"
+              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
             >
-              <polyline points="6 9 6 2 18 2 18 9" />
-              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-              <rect x="6" y="14" width="12" height="8" />
-            </svg>
-            Print
-          </button>
-          <button
-            type="button"
-            className="btn-mindmap-action btn-back-home-mindmap"
-            onClick={handleGoBackToHomeView}
-          >
-            <IconHome />
-            Back to Home
-          </button>
+              {branchText}
+            </text>
+            {hasSubBranches && (
+              <text
+                x={branchX + branchWidth - 15}
+                y={branchY + branchHeight / 2 + 5}
+                textAnchor="middle"
+                fill="#ffffff"
+                fontSize="16"
+                fontWeight="700"
+                className="mindmap-expand-icon"
+              >
+                {'>'}
+              </text>
+            )}
+          </g>
+        );
+
+        // Sub-branches - render if expanded (smaller, compact)
+        if (isExpanded && subBranches.length > 0) {
+          const subBranchStartX = branchX + branchWidth + 50;
+          const subBranchStartY = branchY;
+          const subBranchSpacing = 70;
+
+          subBranches.forEach((subBranch: any, subIndex: number) => {
+            const subY = subBranchStartY + subIndex * subBranchSpacing;
+            const subX = subBranchStartX;
+            const subText = subBranch.name || subBranch.title || subBranch.topic || `Sub ${subIndex + 1}`;
+            const subWidth = 180;
+            const subHeight = 50;
+
+            // Curved line from branch to sub-branch
+            const subStartX = branchX + branchWidth;
+            const subStartY = branchY + branchHeight / 2;
+            const subEndX = subX;
+            const subEndY = subY + subHeight / 2;
+            const subControlX = (subStartX + subEndX) / 2;
+            
+            lines.push(
+              <path
+                key={`subline-${index}-${subIndex}`}
+                d={`M ${subStartX} ${subStartY} C ${subControlX} ${subStartY}, ${subControlX} ${subEndY}, ${subEndX} ${subEndY}`}
+                stroke={nodeColor}
+                strokeWidth="1.5"
+                fill="none"
+                className="mindmap-line"
+                opacity="0.8"
+              />
+            );
+
+            // Sub-branch node (simple style)
+            nodes.push(
+              <g 
+                key={`subbranch-${index}-${subIndex}`} 
+                className="mindmap-node-group"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <rect
+                  x={subX}
+                  y={subY}
+                  width={subWidth}
+                  height={subHeight}
+                  rx="6"
+                  fill={nodeColor}
+                  stroke="none"
+                  className="mindmap-node"
+                  opacity="0.9"
+                />
+                <text
+                  x={subX + subWidth / 2}
+                  y={subY + subHeight / 2 + 4}
+                  textAnchor="middle"
+                  fill="#ffffff"
+                  fontSize="12"
+                  fontWeight="600"
+                  className="mindmap-text"
+                  style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+                >
+                  {subText}
+                </text>
+              </g>
+            );
+          });
+        }
+      });
+    }
+
+    return (
+      <g transform={`translate(${svgTransform.x}, ${svgTransform.y}) scale(${svgTransform.scale})`}>
+        {lines}
+        {nodes}
+      </g>
+    );
+  };
+
+  const renderMindMapSection = () => {
+    // Check if we have backend data
+    const hasBackendData = mindMapData !== null;
+    
+    return (
+      <section
+        id="mindMapSection"
+        className="content-section mindmap-viewer-section active"
+      >
+        <div className="mindmap-viewer-wrapper">
+          <div className="mindmap-viewer-header">
+            <h2 className="mindmap-viewer-title">Your Mind Map</h2>
+            <p className="mindmap-viewer-subtitle">
+              {hasBackendData 
+                ? "Visual representation of your lesson concepts"
+                : "No mind map available. Please generate content first."}
+            </p>
+            {!hasBackendData && backendResponse && (
+              <div style={{ marginTop: '20px', padding: '15px', background: '#f0f0f0', borderRadius: '8px' }}>
+                <strong>Response Status:</strong> {backendResponse.status}<br/>
+                <strong>Message:</strong> {backendResponse.message}<br/>
+                <pre style={{ fontSize: '12px', marginTop: '10px', textAlign: 'left', background: '#f5f5f5', padding: '10px', borderRadius: '4px', overflow: 'auto' }}>
+                  {JSON.stringify(backendResponse.data, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+          {hasBackendData && (
+            <div className="mindmap-container">
+              <div className="mindmap-display">
+                <svg
+                  ref={svgRef}
+                  viewBox="0 0 1200 800"
+                  className="mindmap-svg"
+                  xmlns="http://www.w3.org/2000/svg"
+                  onMouseDown={handleSvgMouseDown}
+                  onMouseMove={handleSvgMouseMove}
+                  onMouseUp={handleSvgMouseUp}
+                  onMouseLeave={handleSvgMouseUp}
+                  onWheel={handleSvgWheel}
+                  style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                >
+                  {renderMindMapNodes(mindMapData)}
+                </svg>
+              </div>
+            </div>
+          )}
+          {!hasBackendData && (
+            <div className="mindmap-viewer-actions" style={{ marginTop: '20px' }}>
+              <button
+                type="button"
+                className="btn-mindmap-action btn-back-home-mindmap"
+                onClick={handleGoBackToHomeView}
+              >
+                <IconHome />
+                Back to Home
+              </button>
+            </div>
+          )}
+          {hasBackendData && (
+            <div className="mindmap-viewer-actions">
+              <button
+                type="button"
+                className="btn-mindmap-action btn-download-mindmap"
+                onClick={() => {
+                  const svg = document.querySelector(".mindmap-svg");
+                  if (svg) {
+                    const svgData = new XMLSerializer().serializeToString(svg);
+                    const blob = new Blob([svgData], {
+                      type: "image/svg+xml;charset=utf-8",
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = "mindmap.svg";
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  }
+                }}
+              >
+                <IconUpload />
+                Download Mind Map
+              </button>
+              <button
+                type="button"
+                className="btn-mindmap-action btn-print-mindmap"
+                onClick={() => window.print()}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ width: "18px", height: "18px" }}
+                >
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                Print
+              </button>
+              <button
+                type="button"
+                className="btn-mindmap-action btn-back-home-mindmap"
+                onClick={handleGoBackToHomeView}
+              >
+                <IconHome />
+                Back to Home
+              </button>
+            </div>
+          )}
         </div>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  };
 
   const renderProfileSection = () => (
     <section id="profile" className="content-section active">
@@ -2194,15 +2680,6 @@ const MainAppPage: React.FC = () => {
       <main className="main-content">
         {/* Decorative Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Large overlapping circles creating the abstract background pattern */}
-          <div className="main-app-circle-1 absolute rounded-full"></div>
-          <div className="main-app-circle-2 absolute rounded-full"></div>
-          <div className="main-app-circle-3 absolute rounded-full"></div>
-          <div className="main-app-circle-4 absolute rounded-full"></div>
-          <div className="main-app-circle-5 absolute rounded-full"></div>
-          <div className="main-app-circle-6 absolute rounded-full"></div>
-          <div className="main-app-circle-7 absolute rounded-full"></div>
-          
           {/* Subtle grid lines for depth */}
           <div className="absolute inset-0">
             <div className="main-app-grid-line absolute left-[15%] top-0 bottom-0 w-[1px]"></div>
@@ -2253,8 +2730,44 @@ const MainAppPage: React.FC = () => {
           <div id="loadingText" className="loading-text">
             {loadingText}
           </div>
+          {/* Progress bar for video generation */}
+          {selectedContentType === "video" && videoProgress > 0 && (
+            <div style={{
+              width: '100%',
+              maxWidth: '300px',
+              marginTop: '20px',
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '8px',
+                fontSize: '13px',
+                color: 'rgba(255, 255, 255, 0.8)',
+              }}>
+                <span>{videoStage}</span>
+                <span>{videoProgress}%</span>
+              </div>
+              <div style={{
+                width: '100%',
+                height: '8px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: '4px',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: `${videoProgress}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #34d399, #059669)',
+                  borderRadius: '4px',
+                  transition: 'width 0.3s ease-in-out',
+                }} />
+              </div>
+            </div>
+          )}
           <div className="loading-subtext">
-            Please wait while we create your content
+            {selectedContentType === "video" 
+              ? videoMessage || "Please wait while we create your video"
+              : "Please wait while we create your content"}
           </div>
         </div>
       </div>

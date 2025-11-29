@@ -2702,17 +2702,28 @@ main footer {
 }
 
 .pdf-display-container {
-  background: transparent;
+  background: #ffffff;
   padding: 0;
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
   margin-bottom: 25px;
   overflow: hidden;
+  min-height: 600px;
 }
 
-.pdf-display-container iframe {
+.pdf-display-container iframe,
+.pdf-frame {
   width: 100%;
-  height: 80vh;
+  height: 600px;
+  border: none;
+  border-radius: 12px;
+  background: #ffffff;
+  display: block;
+}
+
+.pdf-display-container embed {
+  width: 100%;
+  height: 600px;
   border: none;
   border-radius: 12px;
   background: #ffffff;
@@ -2793,6 +2804,16 @@ main footer {
   display: block;
 }
 
+/* Backend-generated images - adjust size to fit box better */
+.slide-display img.backend-generated-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: scale(1.1);
+  transform-origin: center;
+}
+
 .slide-counter {
   text-align: center;
   margin-top: 20px;
@@ -2835,6 +2856,7 @@ main footer {
 }
 
 .video-container {
+  position: relative;
   background: #000;
   border-radius: 16px;
   overflow: hidden;
@@ -2887,41 +2909,77 @@ main footer {
 
 /* Mind Map Viewer Styles */
 .mindmap-container {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 40px;
+  background: #2d3748;
+  padding: 20px;
   border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   margin-bottom: 25px;
   overflow: hidden;
 }
 
 .mindmap-display {
-  background: #ffffff;
+  background: #2d3748;
   border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
   overflow: auto;
   min-height: 500px;
+  max-height: 70vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
+  position: relative;
 }
 
 .mindmap-svg {
   width: 100%;
-  height: auto;
-  max-width: 1000px;
-  max-height: 700px;
+  height: 100%;
+  min-width: 1200px;
+  min-height: 800px;
+  cursor: grab;
+}
+
+.mindmap-svg:active {
+  cursor: grabbing;
+}
+
+.mindmap-node-group {
+  transition: filter 0.2s ease;
+  /* Remove transform to prevent movement */
+}
+
+.mindmap-node-group:hover {
+  filter: brightness(1.15);
+  /* Only change brightness, no transform */
 }
 
 .mindmap-node {
-  transition: all 0.3s ease;
+  transition: filter 0.2s ease;
   cursor: pointer;
+  /* Remove transform to prevent movement */
+}
+
+.mindmap-node-central {
+  cursor: default;
+}
+
+.mindmap-expand-icon {
+  pointer-events: none;
+  user-select: none;
+}
+
+.mindmap-line {
+  transition: stroke-width 0.2s ease;
+}
+
+.mindmap-node-group:hover + .mindmap-line,
+.mindmap-node-group:hover ~ .mindmap-line {
+  stroke-width: 4;
 }
 
 .mindmap-node:hover {
-  transform: scale(1.1);
-  filter: brightness(1.1);
+  filter: brightness(1.2);
+  /* Only brightness change, no transform to prevent movement */
 }
 
 .mindmap-node-central {
@@ -2940,6 +2998,35 @@ main footer {
 .mindmap-text {
   pointer-events: none;
   user-select: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Smooth expansion animation for sub-branches */
+.mindmap-node-group {
+  transform-origin: center;
+}
+
+/* Ensure nodes stay in place during interaction */
+.mindmap-node-group:active {
+  transform: none !important;
+}
+
+.mindmap-node:active {
+  transform: none !important;
+}
+
+/* Smooth fade-in for sub-branches */
+@keyframes fadeInNode {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.mindmap-node-group g[class*="subbranch"] {
+  animation: fadeInNode 0.3s ease-in-out;
 }
 
 .btn-download-mindmap {

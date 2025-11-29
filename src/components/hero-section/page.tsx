@@ -102,15 +102,6 @@ export default function HeroSection() {
 
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Large overlapping circles creating the abstract background pattern */}
-        <div className="hero-circle-1 absolute rounded-full"></div>
-        <div className="hero-circle-2 absolute rounded-full"></div>
-        <div className="hero-circle-3 absolute rounded-full"></div>
-        <div className="hero-circle-4 absolute rounded-full"></div>
-        <div className="hero-circle-5 absolute rounded-full"></div>
-        <div className="hero-circle-6 absolute rounded-full"></div>
-        <div className="hero-circle-7 absolute rounded-full"></div>
-        
         {/* Subtle grid lines for depth */}
         <div className="absolute inset-0">
           <div className="hero-grid-line absolute left-[15%] top-0 bottom-0 w-[1px]"></div>
